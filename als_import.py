@@ -20,7 +20,7 @@ import shutil
 import xml.etree.ElementTree as ET
 
 def main():
-    file_path = 'MultiTrack.als'
+    file_path = 'Gratitude.als'
     song_title, extension = os.path.splitext(file_path)
 
 
@@ -31,11 +31,16 @@ def main():
     xml_tree = ET.parse(file_path)
     xml_root = xml_tree.getroot()
 
+    print(xml_root.get('MajorVersion'))
+
     # Gather title
-    # Gather key
+    title = gather_title(xml_root)
     # Gather Markers
+    markers = gather_markers(xml_root)
     # Gather time signature and meter changes
+    time_sig = gather_time_signature(xml_root)
     # Gather Tempo and Tempo changes
+    tempo = gather_tempo(xml_root)
 
 def convert_als_to_xml(als_path, song_title):
     xml_path = song_title + '.xml'
@@ -49,8 +54,63 @@ def convert_als_to_xml(als_path, song_title):
     return xml_path
 
 
-def gather():
-    ...
+def gather_title(xml_root):
+    # title = xml_root.find('.//TrackName')
+    for elem in xml_root.iter('TrackName'):
+        print(elem)
+
+
+
+def gather_markers(xml_root):
+    markers = []
+    markers_string = ''
+
+    locators = list(xml_root.iter("Locator"))
+    for locator in locators:
+        name = locator.find('Name')
+        marker = name.get('Value')
+        beat_loc = locator.find('Time')
+        beat_num = f"{beat_loc.get('Value')}.00"
+        markers.append((beat_num, marker))
+    
+    sorted_markers = sorted(markers)
+
+    ending_idx = 0
+    for i, m in enumerate(sorted_markers):
+        # idx - title - start time - order - label - duration - end time - fade time - status - actions
+        markers_string += f'{i + 1}\t{m[1]}\tstart time\t{i+1}\t{m[1]}\t{m[0]}\tend time\tfade time\tstatus\tactions'
+
+        if m[1].lower() == 'ending':
+            break
+
+        markers_string += os.linesep
+        
+    print(markers_string)
+    return markers_string
+
+
+def gather_time_signature(xml_root):
+    meter_string = ''
+
+    time_sigs = list(xml_root.iter('RemoteableTimeSignature'))
+    for i, time_sig in enumerate(time_sigs):
+        numer = time_sig.find('Numerator').get('Value')
+        denom = time_sig.find('Denominator').get('Value')
+        beat_loc = f"{time_sig.find('Time').get('Value')}.0000"
+
+        meter_string += f'{numer}/{denom} ({beat_loc})'
+        if i < (len(time_sigs) - 1):
+            meter_string += os.linesep
+
+    print(meter_string)
+
+
+def gather_tempo(xml_root):
+    tempo_tag = xml_root.find('.//Tempo')
+    tempo = f"{tempo_tag.find('Manual').get('Value')}.00"
+
+    return tempo
+
 
 if __name__ == '__main__':
     main()
