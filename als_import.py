@@ -41,6 +41,7 @@ def main():
     time_sig = gather_time_signature(xml_root)
     # Gather Tempo and Tempo changes
     tempo = gather_tempo(xml_root)
+    print(tempo)
 
 def convert_als_to_xml(als_path, song_title):
     xml_path = song_title + '.xml'
@@ -58,7 +59,6 @@ def gather_title(xml_root):
     # title = xml_root.find('.//TrackName')
     for elem in xml_root.iter('TrackName'):
         print(elem)
-
 
 
 def gather_markers(xml_root):
@@ -107,9 +107,25 @@ def gather_time_signature(xml_root):
 
 def gather_tempo(xml_root):
     tempo_tag = xml_root.find('.//Tempo')
-    tempo = f"{tempo_tag.find('Manual').get('Value')}.00"
+    events_tags = list(tempo_tag.iter('Events'))
+    if events_tags:
+        tempo_events = []
+        for tag in events_tags:
+            float_event = tag.find('FloatEvent')
+            tempo = float_event.get('Value')
+            beat_loc = float_event.get('Time')
+            tempo_events.append((beat_loc, tempo))
 
-    return tempo
+        tempo_events = sorted(tempo_events)
+        print('here')
+
+        # Return first tempo event for now, we can return all of them later
+        return tempo_events[0][1] + '.00'
+    
+    manual_tag = tempo_tag.find('Manual')
+    if manual_tag is not None:
+        tempo = f"{manual_tag.get('Value')}.00"
+        return tempo
 
 
 if __name__ == '__main__':
